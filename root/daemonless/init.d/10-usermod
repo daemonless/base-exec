@@ -1,0 +1,22 @@
+#!/bin/sh
+# Handles PUID/PGID mapping and /config permissions
+
+if [ "$(id -u)" != 0 ]; then
+    echo "[usermod] Running as $(id -u):$(id -g): no remap, /config ownership is the runtime's"
+    exit 0
+fi
+
+echo "[usermod] Setting up user bsd with PUID=${PUID} PGID=${PGID}"
+
+# Remap only on a change: a read-only root can't, and the default needs none.
+if [ "$(id -u bsd)" != "${PUID}" ] || [ "$(id -g bsd)" != "${PGID}" ]; then
+    if ! pw groupmod bsd -g "${PGID}" || ! pw usermod bsd -u "${PUID}" -g "${PGID}"; then
+        echo "[usermod] Can't remap bsd to ${PUID}:${PGID} (read-only root?); run with --user ${PUID}:${PGID} instead" >&2
+        exit 1
+    fi
+fi
+
+echo "[usermod] User bsd configured (uid=$(id -u bsd), gid=$(id -g bsd))"
+
+# Ensure /config is writable
+chown -R bsd:bsd /config

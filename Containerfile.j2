@@ -1,0 +1,55 @@
+ARG BASE_VERSION=15-pkg
+
+# Builder: dsu (https://github.com/daemonless/dsu): drops root to bsd for the
+# app and daemonless-cli. It binds setgroups@FBSD_1.0 itself, so it also runs on
+# FreeBSD 14 kernels; no CFLAGS patch needed. Built on every arch.
+FROM ghcr.io/daemonless/base-core:${BASE_VERSION} AS dsu-builder
+
+ARG DSU_VERSION=0.1.0
+ARG DSU_SHA256="03b81a8d73f43a0cf9bc8e99b81278d0cb34028ede1932f91d3a9d0d334298de"
+
+RUN pkg update && pkg install -y \
+        FreeBSD-clang FreeBSD-clibs-dev FreeBSD-toolchain FreeBSD-bmake && \
+    pkg clean -ay && rm -rf /var/cache/pkg/* /var/db/pkg/repos/* && \
+    fetch -qo /tmp/dsu.tar.gz \
+        "https://github.com/daemonless/dsu/archive/refs/tags/v${DSU_VERSION}.tar.gz" && \
+    sha256 -q -c "${DSU_SHA256}" /tmp/dsu.tar.gz && \
+    mkdir /tmp/dsu && tar -xf /tmp/dsu.tar.gz -C /tmp/dsu --strip-components=1 && \
+    make -C /tmp/dsu dsu && strip /tmp/dsu/dsu
+
+# Production image
+FROM ghcr.io/daemonless/base-core:${BASE_VERSION}
+
+ARG PACKAGES=""
+ARG VERSION=""
+ARG FREEBSD_ARCH=amd64
+
+LABEL org.opencontainers.image.title="{{ title }}" \
+    org.opencontainers.image.description="{{ description }}" \
+    org.opencontainers.image.source="{{ repo_url }}" \
+    org.opencontainers.image.url="{{ repo_url }}" \
+    org.opencontainers.image.licenses="{{ license }}" \
+    org.opencontainers.image.vendor="daemonless" \
+    org.opencontainers.image.authors="daemonless" \
+    io.daemonless.type="base" \
+    io.daemonless.category="{{ category }}" \
+    io.daemonless.packages="${PACKAGES}"
+
+COPY root/ /
+
+COPY --from=dsu-builder /tmp/dsu/dsu /usr/local/bin/dsu
+
+RUN mkdir -p /daemonless/init.d \
+    /daemonless/custom.d \
+    /usr/local/daemonless/bin
+
+# App CLIs an image declares (x-daemonless.cli) are wrapped here by
+# daemonless-cli, so podman exec runs them as bsd. Empty otherwise.
+ENV PATH="/usr/local/daemonless/bin:${PATH}"
+
+# /init runs CMD as this user when started as root; root-only images set root.
+ENV DAEMONLESS_USER=bsd
+
+RUN chmod +x /init /healthz /daemonless/init.d/* /usr/local/bin/daemonless-cli
+
+ENTRYPOINT ["/init"]

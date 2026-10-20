@@ -1,0 +1,19 @@
+name: base-exec
+
+x-daemonless:
+  title: "FreeBSD Base (exec)"
+  class: "base"  # built FROM, not deployed: no Deployment section
+  icon: ":simple-freebsd:"
+  category: "Base"
+  description: "FreeBSD base image for single-process containers: /init runs the setup, then execs the app; runs as root (PUID/PGID) or any user (podman --user, Kubernetes runAsUser)"
+  license: "BSD-2-Clause"
+  repo_url: "https://github.com/daemonless/base-exec"
+  upstream_url: "https://github.com/freebsd/freebsd-src"
+  web_url: "https://www.freebsd.org/"
+  user: "root"
+  upstream_binary: false
+  appjail: false
+
+  docs: {}
+
+services: {}

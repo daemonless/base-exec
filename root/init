@@ -1,0 +1,54 @@
+#!/bin/sh
+# daemonless container init (exec): the setup scripts in /daemonless/init.d and
+# /daemonless/custom.d, then exec the command (CMD). No supervisor: the app
+# replaces this script, gets the runtime's signals, and its exit is the
+# container's, so podman, AppJail or Kubernetes restart it.
+#
+# Started as root (the default): PUID/PGID remap bsd (10-usermod) and the
+# command drops to DAEMONLESS_USER (bsd; root-only images set root) with dsu.
+# Started as another user (podman --user, Kubernetes runAsUser): root-only
+# steps are skipped and dsu just execs.
+
+set -e
+
+echo "[init] Starting container initialization..."
+
+uid=$(id -u)
+gid=$(id -g)
+
+if [ "$uid" = 0 ]; then
+	ifconfig lo0 inet 127.0.0.1/8 up || true
+	ifconfig lo0 inet6 ::1/128 up 2>/dev/null || true
+else
+	echo "[init] Running as $uid:$gid: root-only setup is skipped"
+	if [ "${PUID:-$uid}" != "$uid" ] || [ "${PGID:-$gid}" != "$gid" ]; then
+		echo "[init] PUID=${PUID:-} PGID=${PGID:-} ignored: the runtime already set the user"
+	fi
+	case ${HOME:-/} in /) export HOME=/config ;; esac
+	user=$(getent passwd "$uid" | cut -d: -f1)
+	export USER="${user:-$uid}" LOGNAME="${user:-$uid}"
+fi
+
+for script in /daemonless/init.d/*; do
+	[ -x "$script" ] || continue
+	echo "[init] Running: $script"
+	"$script"
+done
+for script in /daemonless/custom.d/*; do
+	[ -x "$script" ] || continue
+	echo "[init] Running custom: $script"
+	"$script"
+done
+
+echo "[init] Initialization complete"
+
+if [ $# -gt 0 ]; then
+	if [ "$uid" = 0 ]; then
+		echo "[init] Executing as ${DAEMONLESS_USER:-bsd}: $*"
+	else
+		echo "[init] Executing: $*"
+	fi
+	exec dsu "${DAEMONLESS_USER:-bsd}" "$@"
+fi
+echo "[init] No command, sleeping..."
+while :; do sleep 86400; done
