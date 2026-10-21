@@ -7,7 +7,7 @@
 # Started as root (the default): PUID/PGID remap bsd (10-usermod) and the
 # command drops to DAEMONLESS_USER (bsd; root-only images set root) with dsu.
 # Started as another user (podman --user, Kubernetes runAsUser): root-only
-# steps are skipped and dsu just execs.
+# steps are skipped and the command runs as that user.
 
 set -e
 
@@ -45,10 +45,10 @@ echo "[init] Initialization complete"
 if [ $# -gt 0 ]; then
 	if [ "$uid" = 0 ]; then
 		echo "[init] Executing as ${DAEMONLESS_USER:-bsd}: $*"
-	else
-		echo "[init] Executing: $*"
+		exec dsu "${DAEMONLESS_USER:-bsd}" "$@"
 	fi
-	exec dsu "${DAEMONLESS_USER:-bsd}" "$@"
+	echo "[init] Executing: $*"
+	exec "$@"
 fi
 echo "[init] No command, sleeping..."
 while :; do sleep 86400; done
