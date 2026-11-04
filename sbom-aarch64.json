@@ -1,11 +1,11 @@
 {
-  "generated": "2026-11-04T10:30:48Z",
+  "generated": "2026-11-04T11:36:35Z",
   "image": "base-exec",
   "tags": {
     "15.1-aarch64": {
       "app_version": "15.1",
       "arch": "aarch64",
-      "generated": "2026-11-04T10:28:50Z",
+      "generated": "2026-11-04T11:34:37Z",
       "packages": {
         "dotnet": [],
         "freebsd": [
@@ -252,7 +252,7 @@
               "MPL20"
             ],
             "name": "ca_root_nss",
-            "version": "3.131"
+            "version": "3.132"
           },
           {
             "licenses": [
@@ -301,7 +301,7 @@
     "15.1-latest-aarch64": {
       "app_version": "15.1",
       "arch": "aarch64",
-      "generated": "2026-11-04T10:28:54Z",
+      "generated": "2026-11-04T11:34:43Z",
       "packages": {
         "dotnet": [],
         "freebsd": [
@@ -548,7 +548,7 @@
               "MPL20"
             ],
             "name": "ca_root_nss",
-            "version": "3.131"
+            "version": "3.132"
           },
           {
             "licenses": [
